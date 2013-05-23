@@ -88,7 +88,9 @@ TopoDS_Shape DisplayWindow::load_model() {
 }
 
 void DisplayWindow::display_model(const TopoDS_Shape& shape) {
-  vtkSmartPointer<vtkPolyData> polydata = cascade_to_vtk(triangulate(shape));
+  VTK_Helper helper;
+  vtkSmartPointer<vtkPolyData> polydata = helper.cascade_to_vtk(triangulate(shape));
+  helper.colour_original_faces();
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputData(polydata);
   vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();

@@ -12,11 +12,10 @@
 
 //  VTK
 #include <vtkCellArray.h>
+#include <vtkCellData.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkUnsignedCharArray.h>
 #include <vtkTriangle.h>
-
-
-//DEBUG
-#include <iostream>
 
 struct vertex {
   double x;
@@ -43,18 +42,15 @@ struct vertex {
 * @brief Convert Cascade triangulation to vtk triangulation
 *
 **/
-vtkSmartPointer<vtkPolyData> cascade_to_vtk(const std::vector<Handle(Poly_Triangulation)>& cascade_data) {
-  vtkSmartPointer<vtkPolyData> poly_data = vtkSmartPointer<vtkPolyData>::New();
-
+vtkSmartPointer<vtkPolyData> VTK_Helper::cascade_to_vtk(const std::vector<Handle(Poly_Triangulation)>& cascade_data) {
   int point_counter = 0; // fix this
   int face_counter = 0;
   
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
 
-  std::map<vertex, int> point_map; 
+  std::map<vertex, int> point_map;
   std::map<int, std::vector< vtkSmartPointer<vtkTriangle> > > faces;
-  std::cout << cascade_data.size() << std::endl;
   for(std::vector<Handle(Poly_Triangulation)>::const_iterator it = cascade_data.begin();
     it != cascade_data.end();
     ++it) {
@@ -97,11 +93,32 @@ vtkSmartPointer<vtkPolyData> cascade_to_vtk(const std::vector<Handle(Poly_Triang
       cells->InsertNextCell(triangle);
     }
     faces.insert(std::make_pair(face_counter, triangles));
-    face_counter++;  
+    face_counter++;
+    break_points.push_back((*it)->NbTriangles());
   }
   poly_data->SetPoints(points);
   poly_data->SetPolys(cells);
   return poly_data;
+}
+
+VTK_Helper::VTK_Helper() {
+  poly_data = vtkSmartPointer<vtkPolyData>::New();
+}
+
+void VTK_Helper::colour_original_faces() {
+  //Colour Faces
+  vtkSmartPointer<vtkUnsignedCharArray> colours = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  colours->SetNumberOfComponents(3);
+  colours->SetName("Colours");
+  for(std::vector<int>::iterator it = break_points.begin(); it != break_points.end(); ++it) {
+    unsigned char red = rand() % 256;
+    unsigned char green = rand() % 256;
+    unsigned char blue = rand() % 256;
+    for(  int i = 0; i < *it; i++) {
+      colours->InsertNextTuple3(red, green, blue);
+    }
+  }
+  poly_data->GetCellData()->SetScalars(colours);
 }
 
 void normalise_vtk_actor(vtkSmartPointer<vtkActor> actor) {
