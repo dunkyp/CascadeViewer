@@ -8,7 +8,7 @@ the presentation in my Academic work. If you want any help with it or have featu
 What this is Not
 ================
 This is not a program designed to allow for modelling, my work is focused on the analysis of mechanical shapes so
-modelling isn't useful for me and let's face it, there are better systems the OpenCASCADE.
+modelling isn't useful for me and let's face it, there are better systems than OpenCASCADE.
 
 Requirements
 =============
