@@ -8,6 +8,7 @@
 #include <qcolordialog.h>
 #include <qfiledialog.h>
 #include <qfileinfo.h>
+#include <qpoint.h>
 
 //VTK
 #include <QVTKInteractor.h>
@@ -15,6 +16,8 @@
 #include <vtkInteractorStyleTrackballActor.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
+
+#include <iostream>
 
 DisplayWindow::DisplayWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -24,17 +27,32 @@ DisplayWindow::DisplayWindow(QWidget *parent) : QMainWindow(parent)
   setup_layout();
   setup_actions();
   setup_menus();
+  setup_buttons();
+}
+
+void DisplayWindow::setup_buttons() {
+  connect(copy_button, SIGNAL(clicked()), this, SLOT(copy_model()));
+  connect(delete_button, SIGNAL(clicked()), this, SLOT(delete_model()));
 }
 
 void DisplayWindow::setup_layout() {
   widget = new QWidget();
   layout = new QGridLayout();
+  button_container = new QWidget();
+  button_layout = new QHBoxLayout();
   widget->setLayout(layout);
+  button_container->setLayout(button_layout);
   setCentralWidget(widget);
   list = new QListWidget();
-  layout->addWidget(vtk_widget, 0, 0, 1, 1);
-  layout->addWidget(list, 0, 1, 1, 1);
+  layout->addWidget(vtk_widget, 0, 0, 2, 1);
+  layout->addWidget(button_container, 0, 1, 1, 1);
+  layout->addWidget(list, 1, 1, 1, 1);
   layout->setColumnStretch(0, 3);
+
+  copy_button = new QPushButton(tr("Copy"));
+  delete_button = new QPushButton(tr("Delete"));
+  button_layout->addWidget(copy_button);
+  button_layout->addWidget(delete_button);
 }
 
 void DisplayWindow::setup_menus() {
@@ -83,10 +101,10 @@ void DisplayWindow::setup_vtk() {
 }
 
 void DisplayWindow::load_file() {
-  display_model(load_model());
+  add_model(load_model());
 }
 
-TopoDS_Shape DisplayWindow::load_model() {
+model DisplayWindow::load_model() {
   QString filename;
   while(filename.isEmpty()) {
     filename = QFileDialog::getOpenFileName(this, tr("Open Model"), "", tr("STEP (*.stp *.step);; STL (*.stl);; WILD(*.*)"));
@@ -94,14 +112,29 @@ TopoDS_Shape DisplayWindow::load_model() {
   StepLoader loader(filename);
   QFileInfo info(filename);
   QString name = info.fileName();
-  list->addItem(name);
-  return loader.get_shape();
+  return model(name, loader.get_shape());
 }
 
-void DisplayWindow::display_model(const TopoDS_Shape& shape) {
+void DisplayWindow::add_model(model& shape) {
+  list->addItem(shape.name);
+  vtkSmartPointer<vtkActor> actor = display_model(shape);
+  if(!name_actor_map.contains(shape.name)) {
+    name_actor_map.insert(shape.name, actor);
+  }
+  else {
+    shape.name = new_name(shape.name);
+    name_actor_map.insert(shape.name, actor);
+  }
+}
+
+vtkSmartPointer<vtkActor> DisplayWindow::display_model(const model& shape) {
   VTK_Helper helper;
-  vtkSmartPointer<vtkPolyData> polydata = helper.cascade_to_vtk(triangulate(shape));
+  vtkSmartPointer<vtkPolyData> polydata = helper.cascade_to_vtk(triangulate(shape.shape));
   helper.colour_original_faces();
+  return display_polydata(polydata);
+}
+
+vtkSmartPointer<vtkActor> DisplayWindow::display_polydata(const vtkSmartPointer<vtkPolyData> polydata) {
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputData(polydata);
   vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
@@ -114,9 +147,41 @@ void DisplayWindow::display_model(const TopoDS_Shape& shape) {
   vtk_widget->SetRenderWindow(renderWindow);
   vtk_widget->show();
   vtk_widget->update();
+  return actor;
 }
 
 void DisplayWindow::set_background_colour() {
   QColor colour = QColorDialog::getColor();
   renderer->SetBackground(colour.redF(), colour.greenF(), colour.blueF());
+}
+
+void DisplayWindow::copy_model() {
+  if(list->currentItem()) {
+    QListWidgetItem* item = list->currentItem();
+    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()];
+    vtkSmartPointer<vtkPolyData> polydata = vtkPolyData::SafeDownCast(actor->GetMapper()->GetInput());
+    vtkSmartPointer<vtkPolyData> polydata_copy = vtkSmartPointer<vtkPolyData>::New();
+    polydata_copy->DeepCopy(polydata);
+    vtkSmartPointer<vtkActor> new_actor = display_polydata(polydata_copy);
+    QString copy_name = new_name(item->text());
+    list->addItem(copy_name);
+    name_actor_map.insert(copy_name, new_actor);
+  }
+}
+
+void DisplayWindow::delete_model() {
+  if(list->currentItem()) {
+    QListWidgetItem* item = list->currentItem();
+    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()];
+    renderer->RemoveActor(actor);
+    vtk_widget->update();
+    delete item;
+  }
+}
+
+QString DisplayWindow::new_name(QString name) {
+  //This will probably be changed as it could be a little misleading
+  if(name_actor_map.contains(name))
+    return new_name(name.append("_copy"));
+  return name;
 }
