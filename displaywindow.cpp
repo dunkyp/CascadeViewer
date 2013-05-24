@@ -30,6 +30,26 @@ DisplayWindow::DisplayWindow(QWidget *parent) : QMainWindow(parent)
   setup_buttons();
 }
 
+DisplayWindow::~DisplayWindow() {
+  //Actions
+  delete load_action;
+  delete background_action;
+  //Menus
+  delete file_menu;
+  delete options_menu;
+  delete menu;
+  //Buttons
+  delete copy_button;
+  delete delete_button;
+  //Layouts
+  delete layout;
+  delete button_layout;
+  //Widgets
+  delete button_container;
+  delete list;
+  delete widget;
+}
+
 void DisplayWindow::setup_buttons() {
   connect(copy_button, SIGNAL(clicked()), this, SLOT(copy_model()));
   connect(delete_button, SIGNAL(clicked()), this, SLOT(delete_model()));
@@ -93,7 +113,6 @@ void DisplayWindow::setup_vtk() {
   vtkSmartPointer<vtkInteractorStyleTrackballActor> style = vtkSmartPointer<vtkInteractorStyleTrackballActor>::New();
   interactor->SetInteractorStyle(style);
   interactor->SetRenderWindow(renderWindow);
-
 
   vtk_widget->SetRenderWindow(renderWindow);
   vtk_widget->show();

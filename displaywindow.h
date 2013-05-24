@@ -32,6 +32,7 @@ class DisplayWindow : public QMainWindow
 
 public:
   explicit DisplayWindow(QWidget *parent = 0);
+  ~DisplayWindow();
   model load_model();
   void add_model(model& shape);
   vtkSmartPointer<vtkActor> display_model(const model& shape);
