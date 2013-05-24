@@ -4,6 +4,8 @@
 #include "vtk.h"
 
 //QT
+#include <qcolor.h>
+#include <qcolordialog.h>
 #include <qfiledialog.h>
 #include <qfileinfo.h>
 
@@ -37,9 +39,14 @@ void DisplayWindow::setup_layout() {
 
 void DisplayWindow::setup_menus() {
   menu = new QMenuBar();
-  file_menu = menu->addMenu("File");
+  
+  file_menu = menu->addMenu(tr("&File"));
   file_menu->addAction(load_action);
   file_menu->addAction(quit_action);
+
+  options_menu = menu->addMenu(tr("&Options"));
+  options_menu->addAction(background_action);
+
   setMenuBar(menu);
 }
 
@@ -53,6 +60,10 @@ void DisplayWindow::setup_actions() {
   quit_action->setShortcuts(QKeySequence::Close);
   quit_action->setStatusTip(tr("Exit Program"));
   connect(quit_action, SIGNAL(triggered()), this, SLOT(close()));
+
+  background_action = new QAction(tr("&Set Background Colour"), this);
+  background_action->setStatusTip(tr("What do you think it might do??"));
+  connect(background_action, SIGNAL(triggered()), this, SLOT(set_background_colour()));
 }
 
 void DisplayWindow::setup_vtk() {
@@ -103,4 +114,9 @@ void DisplayWindow::display_model(const TopoDS_Shape& shape) {
   vtk_widget->SetRenderWindow(renderWindow);
   vtk_widget->show();
   vtk_widget->update();
+}
+
+void DisplayWindow::set_background_colour() {
+  QColor colour = QColorDialog::getColor();
+  renderer->SetBackground(colour.redF(), colour.greenF(), colour.blueF());
 }
