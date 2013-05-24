@@ -15,5 +15,5 @@ INCLUDE(${VTK_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 
 
-add_executable(test main.cpp steploader.cpp displaywindow.cpp triangulate.cpp vtk.cpp)
+add_executable(test main.cpp steploader.cpp displaywindow.cpp triangulate.cpp vtk.cpp stlloader.cpp)
 target_link_libraries(test TKPrim TKSTEP TKXDESTEP ${QT_LIBRARIES} ${VTK_LIBRARIES})
