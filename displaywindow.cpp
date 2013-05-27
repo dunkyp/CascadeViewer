@@ -2,6 +2,7 @@
 #include "steploader.h"
 #include "triangulate.h"
 #include "vtk.h"
+#include "graph.h"
 
 //QT
 #include <qcolor.h>
@@ -85,6 +86,9 @@ void DisplayWindow::setup_menus() {
   options_menu = menu->addMenu(tr("&Options"));
   options_menu->addAction(background_action);
 
+  analysis_menu = menu->addMenu(tr("&Analysis"));
+  analysis_menu->addAction(graph_action);
+
   setMenuBar(menu);
 }
 
@@ -102,6 +106,10 @@ void DisplayWindow::setup_actions() {
   background_action = new QAction(tr("&Set Background Colour"), this);
   background_action->setStatusTip(tr("What do you think it might do??"));
   connect(background_action, SIGNAL(triggered()), this, SLOT(set_background_colour()));
+
+  graph_action = new QAction(tr("&Graph shape"), this);
+  graph_action->setStatusTip(tr("Convert shape to attributed face adjacency graph"));
+  connect(graph_action, SIGNAL(triggered()), this, SLOT(create_graph()));
 }
 
 void DisplayWindow::setup_vtk() {
@@ -138,11 +146,11 @@ void DisplayWindow::add_model(model& shape) {
   list->addItem(shape.name);
   vtkSmartPointer<vtkActor> actor = display_model(shape);
   if(!name_actor_map.contains(shape.name)) {
-    name_actor_map.insert(shape.name, actor);
+    name_actor_map.insert(shape.name, std::make_pair(actor, shape.shape));
   }
   else {
     shape.name = new_name(shape.name);
-    name_actor_map.insert(shape.name, actor);
+    name_actor_map.insert(shape.name, std::make_pair(actor, shape.shape));
   }
 }
 
@@ -177,21 +185,21 @@ void DisplayWindow::set_background_colour() {
 void DisplayWindow::copy_model() {
   if(list->currentItem()) {
     QListWidgetItem* item = list->currentItem();
-    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()];
+    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()].first;
     vtkSmartPointer<vtkPolyData> polydata = vtkPolyData::SafeDownCast(actor->GetMapper()->GetInput());
     vtkSmartPointer<vtkPolyData> polydata_copy = vtkSmartPointer<vtkPolyData>::New();
     polydata_copy->DeepCopy(polydata);
     vtkSmartPointer<vtkActor> new_actor = display_polydata(polydata_copy);
     QString copy_name = new_name(item->text());
     list->addItem(copy_name);
-    name_actor_map.insert(copy_name, new_actor);
+    name_actor_map.insert(copy_name, std::make_pair(new_actor, name_actor_map[item->text()].second));
   }
 }
 
 void DisplayWindow::delete_model() {
   if(list->currentItem()) {
     QListWidgetItem* item = list->currentItem();
-    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()];
+    vtkSmartPointer<vtkActor> actor = name_actor_map[item->text()].first;
     renderer->RemoveActor(actor);
     vtk_widget->update();
     delete item;
@@ -203,4 +211,13 @@ QString DisplayWindow::new_name(QString name) {
   if(name_actor_map.contains(name))
     return new_name(name.append("_copy"));
   return name;
+}
+
+void DisplayWindow::create_graph() {
+  if(list->currentItem()) {
+    QListWidgetItem* item = list->currentItem();
+    TopoDS_Shape shape = name_actor_map[item->text()].second;
+    Graph graph(shape);
+    graph.compute_face_codes();
+  }
 }

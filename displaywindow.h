@@ -1,4 +1,4 @@
-#include "TopoDS_Shape.hxx"
+#include <TopoDS_Shape.hxx>
 
 //std
 #include <utility>
@@ -43,6 +43,7 @@ private slots:
   void set_background_colour();
   void copy_model();
   void delete_model();
+  void create_graph();
 
 private:
   void setup_menus();
@@ -61,6 +62,9 @@ private:
   //Options
   QMenu* options_menu;
   QAction* background_action;
+  //Analysis
+  QMenu* analysis_menu;
+  QAction* graph_action;
 
   QWidget* widget;
   QGridLayout* layout;
@@ -77,5 +81,5 @@ private:
   QHBoxLayout* button_layout;
   QPushButton* copy_button;
   QPushButton* delete_button;
-  QMap< QString, vtkSmartPointer<vtkActor> > name_actor_map;
+  QMap< QString, std::pair<vtkSmartPointer<vtkActor>, TopoDS_Shape> > name_actor_map;
 };
